@@ -31,16 +31,18 @@
 #define TURN_DURATION 600 // ms
 
 // this might need to be tuned for different lighting conditions, surfaces, etc.
-#define QTR_THRESHOLD  1000 // microseconds
+#define QTR_THRESHOLD1  1600 // microseconds
+#define QTR_THRESHOLD2  1000 // microseconds
 
 
 #define NUM_SENSORS 6
 
-ZumoBuzzer buzzer;
+
 //ZumoReflectanceSensorArray reflectanceSensors;
 ZumoMotors motors;
-Pushbutton button(ZUMO_BUTTON);
 String incomingBytes;
+
+int roomNumber = 0; // integer variable to store the room number
 
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 
@@ -64,16 +66,22 @@ void setup() {
 
 void loop() {
 
-  motors.setSpeeds(50, 50);
 
-  borderDetect();
+  if (canMove == true) {
 
+    borderDetect();
+
+  }
+
+  movement();
 
   //sensors.read(sensor_values);
 
 }
 
 void movement() {
+
+  motors.setSpeeds(50, 50);
 
   if (Serial.available() > 0)
   {
@@ -82,67 +90,69 @@ void movement() {
     //    incomingBytes.trim(); // trim the string in the incomingBytes variable to remove any whitespace at the end of the string
 
     // read the oldest byte in the serial buffer:
+
     incomingByte = Serial.read();
 
     if (incomingByte == 'w') { //IF DOESNT WORK CHANGE TO DOUBLE QUOTE
       motors.setSpeeds(50, 50);
     }
 
-    if (incomingByte == 's') {
+    else if (incomingByte == 's') {
       motors.setSpeeds(-150, -150);
     }
-    if (incomingByte == 'a') {
+    else if (incomingByte == 'a') {
       motors.setSpeeds(-150, 150);
       delay(TURN_DURATION);
       motors.setSpeeds(0, 0);
     }
-    if (incomingByte == 'd') {
+    else if (incomingByte == 'd') {
       motors.setSpeeds(150, -150);
       delay(TURN_DURATION);
       motors.setSpeeds(0, 0);
     }
-    if (incomingByte == 'x') {
+    else if (incomingByte == 'x') {
       motors.setSpeeds(0, 0);
     }
 
+    else if (incomingBytes == "Ro R") // else if the incomingBytes string to set to 'Ro R'
+    {
+      motors.setSpeeds(-150, 150); //turn right into the room
+      roomNumber = roomNumber++; // increment the room number
+      String strRoomNumber = String(roomNumber); // convert
+      Serial.println("Here is room number" + strRoomNumber + "and is located on the right"); //number the room and state whether on the left or right of the room in the GUI
+      delay(50);
+      //storeRoomLocations(roomNumber, "right");
+      //Zumo to retain this information
+      motors.setSpeeds(150, 150);
+      delay(50);
+      motors.setSpeeds(0, 0);
+      delay(150);
+      motors.setSpeeds(150, -150);
 
-    //    else if (incomingBytes == "Ro R") // else if the incomingBytes string to set to 'Ro R'
-    //    {
-    //      motors.setSpeeds(-150, 150); //turn right into the room
-    //      roomNumber = roomNumber++; // increment the room number
-    //      String strRoomNumber = String(roomNumber); // convert
-    //      Serial.println("Here is room number" + strRoomNumber + "and is located on the right"); //number the room and state whether on the left or right of the room in the GUI
-    //      delay(50);
-    //
-    //      storeRoomLocations(roomNumber, "right");
-    //      //Zumo to retain this information
-    //
-    //      motors.setSpeeds(150,150);
-    //
-    //      int pingcm = sonar.ping_cm();
-    //      if (pingcm > 0)       //see if it detects anything
-    //      {
-    //        Serial.println("Object detected in room " + strRoomNumber);
-    //        storeObjectDetected(roomNumber);
-    //      }
-    //      else      //if not detected go further into the room
-    //      {
-    //
-    //        motors.setSpeeds(150, -150);
-    //        delay(20);
-    //        motors.setSpeeds(0, 0);
-    //        if (pingcm > 0)
-    //        {
-    //          Serial.println("Object detected in room " + strRoomNumber);
-    //          storeObjectDetected(roomNumber);
-    //        }
-    //        else
-    //        {
-    //          Serial.println("Nothing detected");
-    //        }
-    //      }
-    //      //Zumo to stop and wait for manual control
-    //    }
+      int pingcm = sonar.ping_cm();
+      if (pingcm > 0)       //see if it detects anything
+      {
+        Serial.println("Object detected in room " + strRoomNumber);
+        //storeObjectDetected(roomNumber);
+      }
+      else      //if not detected go further into the room
+      {
+
+        motors.setSpeeds(50, 50);
+        delay(60);
+        motors.setSpeeds(0, 0);
+        if (pingcm > 0)
+        {
+          Serial.println("Object detected in room " + strRoomNumber);
+          //storeObjectDetected(roomNumber);
+        }
+        else
+        {
+          Serial.println("Nothing detected");
+        }
+      }
+      //Zumo to stop and wait for manual control
+    }
     //
     //     else if (incomingBytes == "Ro L") // else if the incomingBytes string to set to 'Ro R'
     //    {
@@ -194,8 +204,8 @@ void borderDetect()
   Serial.println(sensor_values[2]);
   Serial.println(sensor_values[3]);
   Serial.println(sensor_values[5]);
-
-  if (sensor_values[2] > QTR_THRESHOLD || sensor_values[3] > QTR_THRESHOLD) /// TRY 2 DIFFERNT QTR VALUES
+  
+  if (sensor_values[2] > QTR_THRESHOLD1 || sensor_values[3] > QTR_THRESHOLD1) /// TRY 2 DIFFERNT QTR VALUES
   {
 
     motors.setSpeeds(0, 0);
@@ -203,26 +213,26 @@ void borderDetect()
     Serial.println("please enter a command");
     canMove = false;
   }
-  else
+  
+  if (sensor_values[0] > QTR_THRESHOLD2)
   {
-    if (sensor_values[0] > QTR_THRESHOLD)
-    {
-      motors.setSpeeds(200, 0);
-      delay(250);
-      motors.setSpeeds(50, 50);
-      delay(250);
-      loop();
+    motors.setSpeeds(200, 0);
+    delay(250);
+    motors.setSpeeds(50, 50);
+    delay(250);
+    loop();
 
-    }
-    else if (sensor_values[5] > QTR_THRESHOLD)
-    {
-      motors.setSpeeds(0, 200);
-      delay(250);
-      motors.setSpeeds(50, 50);
-      delay(250);
-      loop();
-    }
   }
+  
+  if (sensor_values[5] > QTR_THRESHOLD2)
+  {
+    motors.setSpeeds(0, 200);
+    delay(250);
+    motors.setSpeeds(50, 50);
+    delay(250);
+    loop();
+  }
+  
 }
 
 
@@ -242,3 +252,34 @@ void borderDetect()
 
 
 // see if there's incoming serial data:
+
+
+
+
+//if (sensor_values[2] > QTR_THRESHOLD1 || sensor_values[3] > QTR_THRESHOLD1) /// TRY 2 DIFFERNT QTR VALUES
+//{
+//
+//  motors.setSpeeds(0, 0);
+//  Serial.println("hit a wall!");
+//  Serial.println("please enter a command");
+//  canMove = false;
+//}
+//else
+//{
+//  if (sensor_values[0] > QTR_THRESHOLD2)
+//  {
+//    motors.setSpeeds(200, 0);
+//    delay(250);
+//    motors.setSpeeds(50, 50);
+//    delay(250);
+//    loop();
+//
+//  }
+//  else if (sensor_values[5] > QTR_THRESHOLD2)
+//  {
+//    motors.setSpeeds(0, 200);
+//    delay(250);
+//    motors.setSpeeds(50, 50);
+//    delay(250);
+//    loop();
+//  }
