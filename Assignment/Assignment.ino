@@ -68,9 +68,6 @@ void loop() {
 
   borderDetect();
 
-
-  //sensors.read(sensor_values);
-
 }
 
 void movement() {
@@ -188,13 +185,8 @@ void movement() {
 
 void borderDetect()
 {
-
   sensors.read(sensor_values);
-  Serial.println(sensor_values[0]);
-  Serial.println(sensor_values[2]);
-  Serial.println(sensor_values[3]);
-  Serial.println(sensor_values[5]);
-
+  
   if (sensor_values[2] > QTR_THRESHOLD || sensor_values[3] > QTR_THRESHOLD) /// TRY 2 DIFFERNT QTR VALUES
   {
 
