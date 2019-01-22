@@ -1,29 +1,29 @@
 #include <Wire.h>
 #include <ZumoShield.h>
 
-#define MAX_DISTANCE 400 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
-#define rev_distance 100
-#define TURN_DURATION 593
-#define QTR_THRESHOLD  800 // microseconds
+#define QTR_THRESHOLD 1000 // microseconds
 #define NUM_SENSORS 6
 
 
 ZumoMotors motors;
-ZumoReflectanceSensorArray sensors;
+ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
 Pushbutton button(ZUMO_BUTTON);
 
 boolean canMove =  true;
-char incomingByte;
-unsigned int sensor_values[6];
+String Input;
+unsigned int sensor_values[NUM_SENSORS];
 
 
 void setup()
 {
   // initialize serial communication:
   Serial.begin(9600);
-  // initialize the LED pin as an output:
+
   // Initialize the reflectance sensors module
   sensors.init();
+  sensors.calibrate();
+
+  button.waitForButton();
 }
 
 void loop()
@@ -33,6 +33,7 @@ void loop()
 
   if (canMove == true) {
 
+    motors.setSpeeds(100, 100);
     borderDetect();
 
   }
@@ -45,59 +46,52 @@ void movement()
   if (Serial.available() > 0)  // see if there's incoming serial data:
   {
 
-    //    incomingByte = Serial.readString(); // read the serial string data into the incoming bytes variable
-    //    incomingByte.trim(); // trim the string in the incomingBytes variable to remove any whitespace at the end of the string
+    Input = Serial.readString(); // read the serial string data into the incoming bytes variable
+    Input.trim(); // trim the string in the incomingBytes variable to remove any whitespace at the end of the string
 
-    // read the oldest byte in the serial buffer:
-    incomingByte = Serial.read();
 
-    if (incomingByte == 'w') {
-      motors.setSpeeds(50, 50);
+    if (Input == "w") {
+      motors.setSpeeds(100, 100);
     }
 
-    if (incomingByte == 's') {
-      motors.setSpeeds(-50, -50);
+    if (Input == "s") {
+      motors.setSpeeds(-100, -100);
     }
 
-    if (incomingByte == 'a') {
-      motors.setSpeeds(-170, 170);
-      delay(TURN_DURATION);
+    if (Input == "a") {
+      motors.setSpeeds(-100, 100);
+
+    }
+
+    if (Input == "d") {
+      motors.setSpeeds(100, -100);
+    }
+
+    if (Input == "x") {
       motors.setSpeeds(0, 0);
     }
 
-    if (incomingByte == 'd') {
-      motors.setSpeeds(170, -170);
-      delay(TURN_DURATION);
-      motors.setSpeeds(0, 0);
-    }
-
-    if (incomingByte == 'x') {
-      motors.setSpeeds(0, 0);
-    }
-
-    if (incomingByte == 'c') {
+    if (Input == "c") {
       Serial.println("action complete!");
       Serial.println("resuming!");
       delay(250);
       canMove = true;
     }
 
-    if (incomingByte == "ro r") {
+    if (Input == "ro r") {
 
       Serial.println ("entering a room on the right!");
       delay(250);
-      motors.setSpeeds(170, -170);
-      delay(TURN_DURATION);
+      motors.setSpeeds(100, -50);
       motors.setSpeeds(0, 0);
 
     }
 
-    if (incomingByte == "ro l") {
+    if (Input == "ro l") {
 
       Serial.println ("entering a room on the left!");
       delay(250);
-      motors.setSpeeds(-170, 170);
-      delay(TURN_DURATION);
+      motors.setSpeeds(-50, 100);
       motors.setSpeeds(0, 0);
 
       searchRoom();
@@ -105,8 +99,8 @@ void movement()
     }
 
   }
-
 }
+
 
 void searchRoom()
 {
@@ -121,34 +115,36 @@ void borderDetect()
 {
 
   sensors.read(sensor_values);
-  
+
   if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
   {
     canMove = false;
     motors.setSpeeds(0, 0);
+
     Serial.println("You hit a wall!");
     Serial.println("Please enter a command");
-    motors.setSpeeds(-50, -50);
-    delay(300);
+    motors.setSpeeds(-100, -100);
+    delay(200);
     motors.setSpeeds(0, 0);
     movement();
 
   }
   else
   {
+
     delay(50);
+
     if (sensor_values[0] > QTR_THRESHOLD)
     {
       motors.setSpeeds(0, 0);
-      delay(500);
+      delay(250);
       motors.setSpeeds(150, 0);
       delay(250);
-
     }
     else if (sensor_values[5] > QTR_THRESHOLD)
     {
       motors.setSpeeds(0, 0);
-      delay(500);
+      delay(250);
       motors.setSpeeds(0, 150);
       delay(250);
     }
