@@ -1,34 +1,33 @@
-
-
 #include <Wire.h>
 #include <ZumoShield.h>
 
 #define MAX_DISTANCE 400 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 #define rev_distance 100
 #define TURN_DURATION 593
-#define QTR_THRESHOLD  1000 // microseconds
+#define QTR_THRESHOLD  800 // microseconds
 #define NUM_SENSORS 6
 
+
 ZumoMotors motors;
-ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
+ZumoReflectanceSensorArray sensors;
+Pushbutton button(ZUMO_BUTTON);
 
-const int ledPin = 13; // the pin that the LED is attached to
-int incomingByte;      // a variable to read incoming serial data into
 boolean canMove =  true;
-unsigned int sensor_values[NUM_SENSORS];
+char incomingByte;
+unsigned int sensor_values[6];
 
 
-
-void setup() {
+void setup()
+{
   // initialize serial communication:
   Serial.begin(9600);
   // initialize the LED pin as an output:
-  pinMode(ledPin, OUTPUT);
+  // Initialize the reflectance sensors module
   sensors.init();
-
 }
 
-void loop() {
+void loop()
+{
 
   movement();
 
@@ -40,13 +39,15 @@ void loop() {
 
 }
 
+void movement()
+{
 
-void movement() {
-
-  // see if there's incoming serial data:
-
-  if (Serial.available() > 0)
+  if (Serial.available() > 0)  // see if there's incoming serial data:
   {
+
+    //    incomingByte = Serial.readString(); // read the serial string data into the incoming bytes variable
+    //    incomingByte.trim(); // trim the string in the incomingBytes variable to remove any whitespace at the end of the string
+
     // read the oldest byte in the serial buffer:
     incomingByte = Serial.read();
 
@@ -59,19 +60,15 @@ void movement() {
     }
 
     if (incomingByte == 'a') {
-
       motors.setSpeeds(-170, 170);
       delay(TURN_DURATION);
       motors.setSpeeds(0, 0);
-
     }
 
     if (incomingByte == 'd') {
-
       motors.setSpeeds(170, -170);
       delay(TURN_DURATION);
       motors.setSpeeds(0, 0);
-
     }
 
     if (incomingByte == 'x') {
@@ -85,17 +82,48 @@ void movement() {
       canMove = true;
     }
 
+    if (incomingByte == "ro r") {
+
+      Serial.println ("entering a room on the right!");
+      delay(250);
+      motors.setSpeeds(170, -170);
+      delay(TURN_DURATION);
+      motors.setSpeeds(0, 0);
+
+    }
+
+    if (incomingByte == "ro l") {
+
+      Serial.println ("entering a room on the left!");
+      delay(250);
+      motors.setSpeeds(-170, 170);
+      delay(TURN_DURATION);
+      motors.setSpeeds(0, 0);
+
+      searchRoom();
+
+    }
+
   }
+
+}
+
+void searchRoom()
+{
+
+  Serial.println("searching room");
+
+  //add to a list
 
 }
 
 void borderDetect()
 {
+
   sensors.read(sensor_values);
-
-  if (sensor_values[2] > QTR_THRESHOLD && sensor_values[3] > QTR_THRESHOLD)
+  
+  if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
   {
-
     canMove = false;
     motors.setSpeeds(0, 0);
     Serial.println("You hit a wall!");
@@ -106,25 +134,25 @@ void borderDetect()
     movement();
 
   }
+  else
+  {
+    delay(50);
+    if (sensor_values[0] > QTR_THRESHOLD)
+    {
+      motors.setSpeeds(0, 0);
+      delay(500);
+      motors.setSpeeds(150, 0);
+      delay(250);
 
-
-  //  else
-  //  {
-  //    if (sensor_values[0] > QTR_THRESHOLD)
-  //    {
-  //      motors.setSpeeds(150, 0);
-  //      delay(250);
-  //      motors.setSpeeds(50, 50);
-  //      delay(250);
-  //    }
-  //    else if (sensor_values[5] > QTR_THRESHOLD)
-  //    {
-  //      motors.setSpeeds(0, 150);
-  //      delay(250);
-  //      motors.setSpeeds(50, 50);
-  //      delay(250);
-  //    }
-  //  }
+    }
+    else if (sensor_values[5] > QTR_THRESHOLD)
+    {
+      motors.setSpeeds(0, 0);
+      delay(500);
+      motors.setSpeeds(0, 150);
+      delay(250);
+    }
+  }
 
 }
 
