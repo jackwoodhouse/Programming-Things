@@ -1,16 +1,32 @@
+#include <NewPing.h>
 #include <Wire.h>
 #include <ZumoShield.h>
+
+
+#define TRIGGER_PIN  2  // Arduino pin tied to trigger pin on the ultrasonic sensor.
+#define ECHO_PIN     6  // Arduino pin tied to echo pin on the ultrasonic sensor.
+#define MAX_DISTANCE 25 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
 #define QTR_THRESHOLD 1000 // microseconds
 #define NUM_SENSORS 6
 
 
 ZumoMotors motors;
+
 ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
+
 Pushbutton button(ZUMO_BUTTON);
 
-boolean canMove =  true;
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
+
+int scan = sonar.ping_cm();
+
+boolean help = true;
+
 String Input;
+
+
+boolean canMove = true;
 unsigned int sensor_values[NUM_SENSORS];
 
 
@@ -21,6 +37,7 @@ void setup()
 
   // Initialize the reflectance sensors module
   sensors.init();
+  
   sensors.calibrate();
 
   button.waitForButton();
@@ -68,6 +85,7 @@ void movement()
     }
 
     if (Input == "x") {
+
       motors.setSpeeds(0, 0);
     }
 
@@ -82,8 +100,11 @@ void movement()
 
       Serial.println ("entering a room on the right!");
       delay(250);
-      motors.setSpeeds(100, -50);
+      motors.setSpeeds(150, -100);
+      delay(250);
       motors.setSpeeds(0, 0);
+
+      //searchRoom();
 
     }
 
@@ -91,10 +112,11 @@ void movement()
 
       Serial.println ("entering a room on the left!");
       delay(250);
-      motors.setSpeeds(-50, 100);
+      motors.setSpeeds(-100, 150);
+      delay(250);
       motors.setSpeeds(0, 0);
 
-      searchRoom();
+      //searchRoom();
 
     }
 
@@ -107,8 +129,42 @@ void searchRoom()
 
   Serial.println("searching room");
 
-  //add to a list
+  delay(250);
 
+  motors.setSpeeds(100, 100);
+
+  delay(250);
+
+  motors.setSpeeds(0, 0);
+
+  motors.setSpeeds(-100, 150);
+
+  delay(250);
+  motors.setSpeeds(0, 0);
+
+  while (help == true) {
+
+    motors.setSpeeds(150, -100);
+
+    if (scan > 0) {
+      
+      help = false;
+      Serial.println("object found!");
+      motors.setSpeeds(0, 0);
+      //record object location and number
+
+      //finished
+      //enter command
+    }
+    else {
+      Serial.println("nothing detected!");
+      Serial.println("continuing!");
+    }
+
+  }
+
+  //movement();
+  
 }
 
 void borderDetect()
@@ -151,29 +207,3 @@ void borderDetect()
   }
 
 }
-
-
-//delay(250);                     // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
-//  Serial.print("Ping: ");
-//  Serial.print(sonar.ping_cm()); // Send ping, get distance in cm and print result (0 = outside set distance range)
-//  Serial.println("cm");
-
-//  if(sonar.ping() < MAX_DISTANCE){
-//    Serial.print("CLOSE");
-//    motors.setSpeeds(-100, -100);
-//  }
-//  else {
-//    motors.setSpeeds(100,100);
-//  }
-
-//  Serial.print("Ping: ");
-//  Serial.print(sonar.ping_cm()); // Send ping, get distance in cm and print result (0 = outside set distance range)
-//  Serial.println("cm");
-
-//  if(sonar.ping() < MAX_DISTANCE){
-//    Serial.print("CLOSE");
-//    motors.setSpeeds(-100, -100);
-//  }
-//  else {
-//    motors.setSpeeds(100,100);
-//  }
