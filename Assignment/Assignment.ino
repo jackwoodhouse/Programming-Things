@@ -7,7 +7,7 @@
 #define ECHO_PIN     6  // Arduino pin tied to echo pin on the ultrasonic sensor.
 #define MAX_DISTANCE 25 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
-#define QTR_THRESHOLD 1000 // microseconds
+#define QTR_THRESHOLD 800 // microseconds
 #define NUM_SENSORS 6
 
 
@@ -21,7 +21,7 @@ NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 
 int scan = sonar.ping_cm();
 
-boolean help = true;
+boolean found = false;
 
 String Input;
 
@@ -37,8 +37,8 @@ void setup()
 
   // Initialize the reflectance sensors module
   sensors.init();
-  
-  sensors.calibrate();
+
+  //sensors.calibrate();
 
   button.waitForButton();
 }
@@ -104,7 +104,7 @@ void movement()
       delay(250);
       motors.setSpeeds(0, 0);
 
-      //searchRoom();
+      searchRoom();
 
     }
 
@@ -116,7 +116,7 @@ void movement()
       delay(250);
       motors.setSpeeds(0, 0);
 
-      //searchRoom();
+      searchRoom();
 
     }
 
@@ -142,68 +142,60 @@ void searchRoom()
   delay(250);
   motors.setSpeeds(0, 0);
 
-  while (help == true) {
-
-    motors.setSpeeds(150, -100);
-
-    if (scan > 0) {
-      
-      help = false;
-      Serial.println("object found!");
-      motors.setSpeeds(0, 0);
-      //record object location and number
-
-      //finished
-      //enter command
+  for (int i = 0; i < 80; i++)
+  {
+    if ((i > 10 && i <= 30) || (i > 50 && i <= 70))
+      motors.setSpeeds(-200, 200);
+    else
+      motors.setSpeeds(200, -200);
+    if (sonar.ping_cm() > 0)
+    {
+      found = true;
     }
-    else {
-      Serial.println("nothing detected!");
-      Serial.println("continuing!");
-    }
-
+    motors.setSpeeds(0,0);
   }
 
-  //movement();
-  
+   movement();
+   
 }
 
-void borderDetect()
-{
-
-  sensors.read(sensor_values);
-
-  if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
-  {
-    canMove = false;
-    motors.setSpeeds(0, 0);
-
-    Serial.println("You hit a wall!");
-    Serial.println("Please enter a command");
-    motors.setSpeeds(-100, -100);
-    delay(200);
-    motors.setSpeeds(0, 0);
-    movement();
-
-  }
-  else
+  void borderDetect()
   {
 
-    delay(50);
+    sensors.read(sensor_values);
 
-    if (sensor_values[0] > QTR_THRESHOLD)
+    if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
     {
+      canMove = false;
       motors.setSpeeds(0, 0);
-      delay(250);
-      motors.setSpeeds(150, 0);
-      delay(250);
+
+      Serial.println("You hit a wall!");
+      Serial.println("Please enter a command");
+      motors.setSpeeds(-100, -100);
+      delay(200);
+      motors.setSpeeds(0, 0);
+      movement();
+
     }
-    else if (sensor_values[5] > QTR_THRESHOLD)
+    else
     {
-      motors.setSpeeds(0, 0);
-      delay(250);
-      motors.setSpeeds(0, 150);
-      delay(250);
+
+      delay(50);
+
+      if (sensor_values[0] > QTR_THRESHOLD)
+      {
+        motors.setSpeeds(0, 0);
+        delay(250);
+        motors.setSpeeds(150, 0);
+        delay(250);
+      }
+      else if (sensor_values[5] > QTR_THRESHOLD)
+      {
+        motors.setSpeeds(0, 0);
+        delay(250);
+        motors.setSpeeds(0, 150);
+        delay(250);
+      }
     }
+
   }
-
-}
