@@ -27,6 +27,7 @@ String Input;
 
 
 boolean canMove = true;
+
 unsigned int sensor_values[NUM_SENSORS];
 
 
@@ -36,9 +37,9 @@ void setup()
   Serial.begin(9600);
 
   // Initialize the reflectance sensors module
-  sensors.init();
+  sensors.init(QTR_NO_EMITTER_PIN);
 
-  //sensors.calibrate();
+  sensors.calibrate(QTR_NO_EMITTER_PIN);
 
   button.waitForButton();
 }
@@ -103,23 +104,58 @@ void movement()
       motors.setSpeeds(150, -100);
       delay(250);
       motors.setSpeeds(0, 0);
-
       searchRoom();
-
     }
 
     if (Input == "ro l") {
-
       Serial.println ("entering a room on the left!");
       delay(250);
       motors.setSpeeds(-100, 150);
       delay(250);
       motors.setSpeeds(0, 0);
-
       searchRoom();
-
     }
 
+  }
+}
+
+void borderDetect()
+{
+
+  sensors.read(sensor_values);
+
+  if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || 
+      (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || 
+      (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
+  {
+    canMove = false;
+    motors.setSpeeds(0, 0);
+
+    Serial.println("You hit a wall!");
+    Serial.println("Please enter a command");
+    motors.setSpeeds(-100, -100);
+    delay(200);
+    motors.setSpeeds(0, 0);
+    movement();
+
+  }
+  else
+  {
+    delay(50);
+    if (sensor_values[0] > QTR_THRESHOLD)
+    {
+      motors.setSpeeds(0, 0);
+      delay(250);
+      motors.setSpeeds(150, -50);
+      delay(250);
+    }
+    else if (sensor_values[5] > QTR_THRESHOLD)
+    {
+      motors.setSpeeds(0, 0);
+      delay(250);
+      motors.setSpeeds(-50, 150);
+      delay(250);
+    }
   }
 }
 
@@ -151,51 +187,14 @@ void searchRoom()
     if (sonar.ping_cm() > 0)
     {
       found = true;
+      motors.setSpeeds(0, 0);
     }
-    motors.setSpeeds(0,0);
+
   }
-
-   movement();
-   
-}
-
-  void borderDetect()
+  motors.setSpeeds(0, 0);
+  if (found)
   {
-
-    sensors.read(sensor_values);
-
-    if ((sensor_values[0] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD) || (sensor_values[0] > QTR_THRESHOLD && sensor_values[1] > QTR_THRESHOLD) || (sensor_values[4] > QTR_THRESHOLD && sensor_values[5] > QTR_THRESHOLD))
-    {
-      canMove = false;
-      motors.setSpeeds(0, 0);
-
-      Serial.println("You hit a wall!");
-      Serial.println("Please enter a command");
-      motors.setSpeeds(-100, -100);
-      delay(200);
-      motors.setSpeeds(0, 0);
-      movement();
-
-    }
-    else
-    {
-
-      delay(50);
-
-      if (sensor_values[0] > QTR_THRESHOLD)
-      {
-        motors.setSpeeds(0, 0);
-        delay(250);
-        motors.setSpeeds(150, 0);
-        delay(250);
-      }
-      else if (sensor_values[5] > QTR_THRESHOLD)
-      {
-        motors.setSpeeds(0, 0);
-        delay(250);
-        motors.setSpeeds(0, 150);
-        delay(250);
-      }
-    }
-
+    //Serial.println("Object detected in room " + strRoomNumber + "\r\n");
+    //storeObjectDetected(roomNumber);
   }
+}
